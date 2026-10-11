@@ -18,8 +18,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Debug OIDC token
+      run: |
+        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
+        echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq '{sub, aud, repository}'
+
     - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4 # test
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::328433601416:role/github
         aws-region: eu-central-1
@@ -31,8 +37,8 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: lab1-repo 
-        IMAGE_TAG: ${{ github.sha }} 
+        ECR_REPOSITORY: lab1-repo
+        IMAGE_TAG: ${{ github.sha }}
       run: |
         cd app
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
